@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panneau QRQC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#14213d; --board:#f8fafb; --grid:#dbe5ee; --muted:#5b6776;
+  --red:#d62839; --blue:#1d4ed8; --green:#1f9d55; --orange:#f08a24; --postit:#ffe86b;
+  --line:#14213d;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background-color:var(--board);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  font:500 14px/1.4 Barlow,system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--ink);
+}
+.wrap{max-width:1500px;margin:0 auto;padding:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+
+/* Bandeau */
+.hdr{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;margin-bottom:16px}
+.hdr .title{flex:1 1 380px;background:var(--ink);color:#fff;border-radius:6px;padding:14px 18px;box-shadow:4px 4px 0 rgba(20,33,61,.35)}
+.hdr .title small{display:block;opacity:.75;font-weight:600}
+.hdr h1{font-family:'Permanent Marker',cursive;font-weight:400;font-size:30px;line-height:1.15;margin:2px 0 0;word-break:break-word}
+.tiles{display:flex;gap:10px;flex-wrap:wrap}
+.tile{background:#fff;border:3px solid var(--ink);border-radius:6px;padding:8px 14px;min-width:120px;text-align:center;box-shadow:3px 3px 0 var(--ink)}
+.tile b{display:block;font-family:'Permanent Marker',cursive;font-weight:400;font-size:34px;line-height:1.1}
+.tile span{font-size:12.5px;color:var(--muted);font-weight:600}
+.tile.bad b{color:var(--red)} .tile.ok b{color:var(--green)}
+.light{width:42px;height:42px;border-radius:50%;margin:0 auto 2px;border:3px solid var(--ink);background:#c9d1da}
+.light.green{background:var(--green)} .light.orange{background:var(--orange)} .light.red{background:var(--red)}
+.tools{display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:flex-start}
+.btn{background:#fff;border:2px solid var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700}
+.btn:hover{background:#eef3f8}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.saved{font-size:12.5px;color:var(--muted);min-height:18px}
+
+/* Panneaux */
+.panel{background:#fff;border:3px solid var(--ink);border-radius:6px;padding:14px 16px 16px;margin-bottom:16px;box-shadow:4px 4px 0 var(--ink)}
+.ptitle{display:flex;align-items:center;gap:10px;font-family:'Permanent Marker',cursive;font-weight:400;font-size:25px;margin:0 0 2px;line-height:1.2}
+.disc{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:Barlow,sans-serif;font-weight:700;font-size:18px;flex:none}
+.sub{color:var(--muted);margin:0 0 12px;max-width:100ch}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:1000px){.two{grid-template-columns:1fr}}
+
+/* Post-it du problème */
+.postits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:1100px){.postits{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.postits{grid-template-columns:1fr}}
+.postit{background:var(--postit);border:2px solid #d4bd32;border-radius:3px;padding:8px 10px 10px;display:flex;flex-direction:column;gap:4px;box-shadow:2px 3px 0 rgba(20,33,61,.18)}
+.postit h4{margin:0;font-weight:700;font-size:15px}
+.postit h4 small{display:block;font-weight:500;color:#5d5200;font-size:12.5px}
+textarea,input[type=text],input[type=date],input[type=number],select{
+  width:100%;background:#fff;border:2px solid #b8c4d0;border-radius:5px;padding:6px 8px;min-height:36px}
+textarea{resize:vertical;min-height:58px;line-height:1.35}
+.postit textarea{background:rgba(255,255,255,.7);border-color:#d4bd32}
+textarea:focus,input:focus,select:focus{border-color:var(--blue)}
+
+/* Statuts */
+select.t-green{background:#d5f3df;border-color:var(--green)}
+select.t-red{background:#fbd9dd;border-color:var(--red)}
+select.t-orange{background:#fde3c4;border-color:var(--orange)}
+select.t-yellow{background:#fff3b8;border-color:#d6b800}
+select.t-gray{background:#eef1f5}
+
+/* Actions */
+.rows{display:flex;flex-direction:column;gap:10px}
+.ticket{border:2px solid var(--ink);border-left-width:10px;border-radius:5px;padding:8px 10px;background:#fff}
+.ticket.t-green{border-left-color:var(--green)} .ticket.t-red{border-left-color:var(--red)}
+.ticket.t-orange{border-left-color:var(--orange)} .ticket.t-yellow{border-left-color:#d6b800} .ticket.t-gray{border-left-color:#aab4c0}
+.ticket.late{background:#fff0f1}
+.ticket .name{font-weight:700;font-size:15px;border-color:transparent;background:transparent;padding-left:2px}
+.ticket .name:hover,.ticket .name:focus{background:#fff;border-color:#b8c4d0}
+.hint{color:var(--muted);font-size:12.5px;margin:0 0 6px 2px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:6px}
+.fields label{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--muted);gap:2px}
+.fields label.full{grid-column:1/-1}
+.clip{display:flex;align-items:center;gap:6px}
+.addrow{margin-top:10px}
+
+/* 5 pourquoi */
+.chain{display:flex;flex-direction:column;align-items:stretch}
+.why{border:2px solid var(--ink);border-radius:6px;padding:8px 10px;background:#fff}
+.why.root{border-color:var(--red);background:#fff4f5;border-width:3px}
+.why .wh{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:4px}
+.why .wh b{font-family:'Permanent Marker',cursive;font-weight:400;font-size:18px}
+.why .wh select{width:auto;min-width:130px}
+.arrow{align-self:center;text-align:center;color:var(--muted);font-weight:700;font-size:13px;line-height:1;padding:3px 0}
+.arrow::before{content:"";display:block;width:3px;height:12px;background:var(--ink);margin:0 auto}
+.arrow::after{content:"▼";display:block;color:var(--ink);font-size:12px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.check{border:2px dashed #8795a6;border-radius:6px;padding:8px 10px}
+.check b{font-size:14px}
+
+/* Ishikawa */
+svg.fish{width:100%;height:auto;display:block;background:#fcfdfe;border:2px solid var(--ink);border-radius:6px}
+.fish .spine,.fish .bone{stroke:var(--ink);stroke-width:4;stroke-linecap:round}
+.fish .bone{stroke-width:3}
+.fish .rib{stroke:#8795a6;stroke-width:1.6}
+.fish .blabel rect{fill:var(--ink)} .fish .blabel text{fill:#fff;font-weight:700;font-size:17px}
+.fish .blabel{cursor:pointer}
+.fish .headbox{fill:#fff4f5;stroke:var(--red);stroke-width:4}
+.fish .headtxt{font-family:'Permanent Marker',cursive;font-size:19px;fill:var(--ink)}
+.fish .cause{cursor:pointer}
+.fish .ctext{font-size:14px;font-weight:600;fill:var(--ink)}
+.fish .cause.t-gray .ctext{fill:#56606d}
+.fish .cause.t-green .ctext{fill:#0d7a3b}
+.fish .cause.t-green .rib{stroke:var(--green);stroke-width:2.6}
+.fish .cause.t-red .ctext{fill:var(--red);font-weight:700}
+.fish .cause.t-red .rib{stroke:var(--red);stroke-width:3.4}
+.fish .cause.struck .ctext{text-decoration:line-through;fill:#99a3af}
+.fish .cause:hover .ctext,.fish .cause:focus .ctext{text-decoration:underline}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:8px 2px 0;color:var(--muted);font-size:13px}
+.legend i{display:inline-block;width:20px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+
+/* Mesures */
+svg.chart{width:100%;height:auto;display:block;background:#fcfdfe;border:2px solid var(--ink);border-radius:6px}
+.chart text{font-size:13px;fill:var(--ink)}
+.chart .axis{stroke:#8795a6} .chart .rate{fill:none;stroke:var(--ink);stroke-width:3}
+.chart .marker{stroke:var(--blue);stroke-width:3;stroke-dasharray:8 6}
+.chart .mk{fill:var(--blue);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0}
+.kpi{border:2px solid var(--ink);border-radius:6px;padding:8px 12px;background:#fff}
+.kpi b{display:block;font-family:'Permanent Marker',cursive;font-weight:400;font-size:30px;line-height:1.15}
+.kpi span{color:var(--muted);font-size:12.5px;font-weight:600}
+.kpi.good b{color:var(--green)} .kpi.bad b{color:var(--red)}
+table.meas{width:100%;border-collapse:collapse;margin-top:6px}
+table.meas th{text-align:left;font-size:12px;color:var(--muted);padding:2px 6px}
+table.meas td{padding:3px 4px}
+.crit{margin-top:8px;display:grid;gap:4px}
+.crit label{font-weight:700}
+
+/* Efficacité & clôture */
+.effgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.eff{border:2px solid var(--ink);border-radius:6px;padding:8px 10px}
+.eff h4{margin:0 0 2px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.seg button{flex:1 1 auto;border:2px solid var(--ink);background:#fff;border-radius:6px;padding:6px 8px;cursor:pointer;font-weight:700}
+.seg button.on.t-green{background:var(--green);color:#fff}
+.seg button.on.t-orange{background:var(--orange);color:#fff}
+.seg button.on.t-red{background:var(--red);color:#fff}
+.seg button.on.t-gray{background:#8795a6;color:#fff}
+.seg button:disabled{opacity:.5;cursor:not-allowed}
+.gate{border:4px solid;border-radius:6px;padding:10px 14px;margin-bottom:12px}
+.gate.ok{border-color:var(--green);background:#e6f7ec}
+.gate.ko{border-color:var(--red);background:#fff1f2}
+.gate b{font-family:'Permanent Marker',cursive;font-weight:400;font-size:24px}
+.gate ul{margin:6px 0 0 18px;padding:0}
+.chk{display:flex;gap:10px;align-items:center;padding:6px 8px;border:2px solid var(--ink);border-radius:6px;background:#fff;margin-bottom:6px}
+.chk button{width:34px;height:34px;border:3px solid var(--ink);border-radius:6px;background:#fff;font-size:22px;line-height:1;cursor:pointer;flex:none}
+.chk button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.chk button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Dialog + toast */
+dialog{border:3px solid var(--ink);border-radius:8px;padding:16px;width:min(560px,94vw);box-shadow:6px 6px 0 var(--ink)}
+dialog::backdrop{background:rgba(20,33,61,.45)}
+dialog h3{font-family:'Permanent Marker',cursive;font-weight:400;font-size:24px;margin:0 0 10px}
+dialog .f{display:grid;gap:3px;margin-bottom:10px;font-weight:700;font-size:13px}
+dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:6px;padding:10px 16px;font-weight:600;display:none;z-index:50;max-width:90vw}
+#toast.err{background:var(--red)}
+.msg{padding:40px;text-align:center;font-size:18px}
+.lock{color:var(--muted);font-size:12.5px}
+
+@media print{
+  @page{size:A3 landscape;margin:8mm}
+  body{background:#fff}
+  .tools,.btn,.addrow,.noprint{display:none!important}
+  .panel{box-shadow:none;break-inside:avoid}
+  textarea,input,select{border-color:#ccc!important;background:#fff!important}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"><div class="msg">Chargement du panneau…</div></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dlg"></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/monday-sdk-js@0.5.5/dist/main.js"></script>
+<script>
+(function () {
+'use strict';
+
+/* ==================== Configuration ==================== */
+const monday = window.mondaySdk();
+
+// Groupes retrouvés par le début de leur titre (robuste à la duplication du board)
+const GRX = {
+  g1:/^①/, g2:/^②/, gI:/^🐟/, g3:/^③/, g4:/^④/, g5:/^⑤/, g6:/^⑥/,
+  g7:/^⑦/, gM:/^📊/, g8:/^⑧/, g9:/^⑨/
+};
+// Colonnes retrouvées par leur titre
+const CRX = {
+  guide:t=>/attend/i.test(t), rep:t=>/Réponse/.test(t), statut:t=>t.trim()==='Statut',
+  cote:t=>/Côté/.test(t), resp:t=>/Responsable/.test(t), ech:t=>/Échéance/.test(t),
+  preuve:t=>/Preuve/.test(t), valid:t=>/Validation/.test(t), crit:t=>/Critère/.test(t),
+  eff:t=>/Efficacité mesurée/.test(t), dver:t=>/Date de vérification/.test(t),
+  branche:t=>/Branche Ishikawa/.test(t), nature:t=>/Nature de la cause/.test(t),
+  scause:t=>/Statut de la cause/.test(t), phase:t=>/Phase de mesure/.test(t),
+  dmes:t=>/Date de mesure/.test(t), qc:t=>/Qté contrôlée/.test(t), qd:t=>/Qté défectueuse/.test(t)
+};
+const BRANCHES = [
+  {k:'Matière',pos:'top',x:300},{k:'Machine',pos:'top',x:590},{k:'Méthode',pos:'top',x:880},
+  {k:"Main-d'œuvre",pos:'bot',x:300},{k:'Milieu',pos:'bot',x:590},{k:'Mesure / Contrôle',pos:'bot',x:880}
+];
+const PLACEHOLDER = /\(cause (candidate|de non-détection)\)/;
+
+const S = { boardId:null, boardName:'', cols:{}, groups:{}, gmap:{}, items:[], users:[], guest:false, ready:false };
+
+/* ==================== Utilitaires ==================== */
+const $ = (sel, root=document) => root.querySelector(sel);
+const h = (tag, attrs, ...kids) => {
+  const e = document.createElement(tag);
+  let value;
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'value') value = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) { if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(c)); }
+  if (value !== undefined) e.value = value;
+  return e;
+};
+const NS = 'http://www.w3.org/2000/svg';
+const s = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v); return e; };
+const trunc = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
+const shortName = n => n.split(' — ')[0].trim();
+const subName = n => (n.includes(' — ') ? n.split(' — ').slice(1).join(' — ').trim() : '');
+const today = () => new Date().toISOString().slice(0, 10);
+
+let toastTimer;
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.style.display = 'none'), err ? 6000 : 2200);
+}
+let pending = 0;
+function saving(on) {
+  pending += on ? 1 : -1;
+  const el = $('#saved'); if (!el) return;
+  el.textContent = pending > 0 ? 'Enregistrement…' : 'Enregistré ✓';
+}
+
+function tone(label) {
+  const l = label || '';
+  if (/Refusé|Bloqué|Inefficace|CAUSE RACINE/.test(l)) return 'red';
+  if (/Fait|Validé|Efficace|Prouvée/.test(l)) return 'green';
+  if (/En cours|Partielle/.test(l)) return 'orange';
+  if (/attente|valider/.test(l)) return 'yellow';
+  return 'gray';
+}
+
+/* ==================== API Monday ==================== */
+async function gql(query, variables) {
+  const r = await monday.api(query, { variables });
+  if (r && r.errors && r.errors.length) throw new Error(r.errors[0].message);
+  if (r && r.error_message) throw new Error(r.error_message);
+  return r.data;
+}
+const ITEM_FIELDS = 'id name group{id} column_values{id type text value}';
+
+function labelsOf(c) {
+  try {
+    const l = (JSON.parse(c.settings_str || '{}').labels) || {};
+    if (Array.isArray(l)) return l.map(x => x.label || x.name).filter(Boolean);
+    return Object.entries(l).sort((a, b) => a[0] - b[0]).map(e => e[1]).filter(Boolean);
+  } catch (e) { return []; }
+}
+
+async function load() {
+  const d = await gql(`query($ids:[ID!]){boards(ids:$ids){id name columns{id title type settings_str} groups{id title} items_page(limit:500){cursor items{${ITEM_FIELDS}}}}}`, { ids: [S.boardId] });
+  const b = d.boards && d.boards[0];
+  if (!b) throw new Error('Board introuvable ou accès refusé.');
+  let items = b.items_page.items, cur = b.items_page.cursor;
+  while (cur) {
+    const n = await gql(`query($c:String!){next_items_page(cursor:$c,limit:500){cursor items{${ITEM_FIELDS}}}}`, { c: cur });
+    items = items.concat(n.next_items_page.items); cur = n.next_items_page.cursor;
+  }
+  S.boardName = b.name;
+  S.cols = {};
+  for (const [k, test] of Object.entries(CRX)) {
+    const c = b.columns.find(c => test(c.title));
+    if (c) S.cols[k] = { id: c.id, type: c.type, labels: c.type === 'status' ? labelsOf(c) : [] };
+  }
+  S.groups = {}; S.gmap = {};
+  for (const [k, rx] of Object.entries(GRX)) {
+    const g = b.groups.find(g => rx.test(g.title));
+    if (g) { S.groups[k] = g.id; S.gmap[g.id] = k; }
+  }
+  S.items = items.map(it => {
+    const v = {};
+    for (const [k, c] of Object.entries(S.cols)) {
+      const cv = it.column_values.find(x => x.id === c.id);
+      v[k] = { text: cv ? (cv.text || '') : '', value: cv ? cv.value : null };
+    }
+    return { id: it.id, name: it.name, gk: S.gmap[it.group && it.group.id] || null, v };
+  });
+}
+async function loadPeople() {
+  try {
+    const d = await gql('query{me{id name is_guest} users(limit:200){id name}}');
+    S.guest = !!(d.me && d.me.is_guest);
+    S.users = d.users || [];
+  } catch (e) {
+    try { const d = await gql('query{me{id name is_guest}}'); S.guest = !!d.me.is_guest; } catch (e2) { /* sans objet */ }
+  }
+}
+
+const inGroup = k => S.items.filter(i => i.gk === k);
+const val = (it, k) => (it.v[k] ? it.v[k].text : '');
+const num = (it, k) => { const t = val(it, k).replace(',', '.').replace(/\s/g, ''); const n = parseFloat(t); return isNaN(n) ? null : n; };
+
+// Écriture : plusieurs colonnes d'un item en une seule requête
+async function setMany(it, pairs) {
+  const cv = {};
+  const prev = {};
+  let nameChange = null;
+  for (const p of pairs) {
+    if (p.key === 'name') { nameChange = p.text; cv.name = p.text; continue; }
+    const col = S.cols[p.key];
+    if (!col) { toast('Colonne introuvable dans ce board : ' + p.key, true); return false; }
+    cv[col.id] = p.json; prev[p.key] = it.v[p.key];
+  }
+  const prevName = it.name;
+  for (const p of pairs) { if (p.key === 'name') it.name = p.text; else it.v[p.key] = { text: p.text == null ? '' : String(p.text), value: null }; }
+  saving(true);
+  try {
+    await gql('mutation($b:ID!,$i:ID!,$cv:JSON!){change_multiple_column_values(board_id:$b,item_id:$i,column_values:$cv){id}}',
+      { b: S.boardId, i: it.id, cv: JSON.stringify(cv) });
+    saving(false); return true;
+  } catch (e) {
+    saving(false);
+    Object.assign(it.v, prev); if (nameChange != null) it.name = prevName;
+    toast('Échec de l’enregistrement : ' + e.message, true); render(); return false;
+  }
+}
+const P = {
+  text:(key,t)=>({ key, json:t, text:t }),
+  long:(key,t)=>({ key, json:{ text:t }, text:t }),
+  status:(key,l)=>({ key, json:{ label:l }, text:l }),
+  date:(key,d)=>({ key, json:d ? { date:d } : null, text:d || '' }),
+  num:(key,n)=>({ key, json:(n === '' || n == null) ? null : String(n), text:(n === '' || n == null) ? '' : String(n) }),
+  name:(t)=>({ key:'name', text:t }),
+  person:(key,u)=>({ key, json:u ? { personsAndTeams:[{ id:Number(u.id), kind:'person' }] } : null, text:u ? u.name : '' })
+};
+async function addItem(gkey, name, pairs) {
+  const gid = S.groups[gkey]; if (!gid) { toast('Groupe introuvable pour cette étape.', true); return; }
+  const cv = {};
+  for (const p of (pairs || [])) { if (S.cols[p.key]) cv[S.cols[p.key].id] = p.json; }
+  saving(true);
+  try {
+    await gql('mutation($b:ID!,$g:String,$n:String!,$cv:JSON){create_item(board_id:$b,group_id:$g,item_name:$n,column_values:$cv){id}}',
+      { b: S.boardId, g: gid, n: name, cv: JSON.stringify(cv) });
+    await load(); saving(false); render();
+  } catch (e) { saving(false); toast('Création impossible : ' + e.message, true); }
+}
+async function deleteItem(it) {
+  saving(true);
+  try { await gql('mutation($i:ID!){delete_item(item_id:$i){id}}', { i: it.id }); await load(); saving(false); render(); }
+  catch (e) { saving(false); toast('Suppression impossible : ' + e.message, true); }
+}
+function openCard(it) { try { monday.execute('openItemCard', { itemId: Number(it.id) }); } catch (e) { /* hors Monday */ } }
+
+/* ==================== Composants de formulaire ==================== */
+function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(t.scrollHeight + 2, 58) + 'px'; }
+function area(it, key, opts = {}) {
+  const guide = val(it, 'guide');
+  const t = h('textarea', {
+    rows: opts.rows || 2, value: val(it, key), placeholder: opts.placeholder || guide || 'À renseigner…',
+    title: guide || null, disabled: opts.disabled || null,
+    oninput: () => grow(t),
+    onchange: () => setMany(it, [P.long(key, t.value)])
+  });
+  return t;
+}
+function line(it, key, opts = {}) {
+  const t = h('input', { type: 'text', value: val(it, key), placeholder: opts.placeholder || '', disabled: opts.disabled || null,
+    onchange: () => setMany(it, [P.text(key, t.value)]) });
+  return t;
+}
+function statusSel(it, key, opts = {}) {
+  const col = S.cols[key];
+  if (!col) return h('span', { class: 'lock' }, '—');
+  const cur = val(it, key);
+  const sel = h('select', {
+    class: 't-' + tone(cur), disabled: opts.disabled || null, 'aria-label': opts.label || key,
+    onchange: async () => { const ok = await setMany(it, [P.status(key, sel.value)]); if (ok) { opts.after ? opts.after() : render(); } }
+  }, h('option', { value: '' }, '—'), col.labels.map(l => h('option', { value: l }, l)));
+  sel.value = cur;
+  return sel;
+}
+function dateIn(it, key, opts = {}) {
+  const d = h('input', { type: 'date', value: val(it, key), disabled: opts.disabled || null,
+    onchange: async () => { const ok = await setMany(it, [P.date(key, d.value)]); if (ok) (opts.after || refreshHeader)(); } });
+  return d;
+}
+function personSel(it) {
+  const cur = val(it, 'resp');
+  if (!S.users.length) return h('input', { type: 'text', value: cur, disabled: true, title: 'Liste des personnes indisponible : assignez depuis la fiche Monday.' });
+  let curId = '';
+  try { const pv = JSON.parse(it.v.resp.value || '{}'); curId = pv.personsAndTeams && pv.personsAndTeams[0] ? String(pv.personsAndTeams[0].id) : ''; } catch (e) { /* ok */ }
+  const sel = h('select', { 'aria-label': 'Responsable',
+    onchange: () => { const u = S.users.find(u => String(u.id) === sel.value); setMany(it, [P.person('resp', u || null)]); } },
+    h('option', { value: '' }, '—'), S.users.map(u => h('option', { value: String(u.id) }, u.name)));
+  sel.value = curId;
+  if (curId && sel.value !== curId) { sel.append(h('option', { value: curId }, cur || 'Assigné')); sel.value = curId; }
+  return sel;
+}
+function filesCount(it) { try { const v = JSON.parse(it.v.preuve.value || '{}'); return (v.files || []).length; } catch (e) { return 0; } }
+
+function panel(color, disc, title, sub, ...body) {
+  return h('section', { class: 'panel' },
+    h('h2', { class: 'ptitle' }, h('span', { class: 'disc', style: 'background:' + color }, disc), title),
+    sub ? h('p', { class: 'sub' }, sub) : null, body);
+}
+function field(label, el, full) { return h('label', { class: full ? 'full' : '' }, label, el); }
+
+/* ==================== Indicateurs ==================== */
+function actionItems() { return [].concat(inGroup('g2'), inGroup('g5'), inGroup('g6')); }
+function isLate(it) { const d = val(it, 'ech'); return d && d < today() && val(it, 'statut') !== 'Fait'; }
+function decisionItem() { return inGroup('g7').find(i => /^DÉCISION/.test(i.name)); }
+function gateStatus() {
+  const missing = [];
+  const dec = decisionItem();
+  if (!dec || !/Efficace/.test(val(dec, 'eff')) || /Inefficace/.test(val(dec, 'eff'))) missing.push('La décision d’efficacité n’est pas « Efficace » (étape ⑦).');
+  const notValid = [].concat(inGroup('g5'), inGroup('g6')).filter(i => !/N\/A/.test(val(i, 'valid')) && !/Validé/.test(val(i, 'valid')));
+  if (notValid.length) missing.push(notValid.length + ' action(s) corrective(s) non validée(s) par Izipizi (passer à « N/A » les lignes inutilisées).');
+  const checks = inGroup('g9').filter(i => !/^🏁/.test(i.name));
+  const open = checks.filter(i => val(i, 'statut') !== 'Fait');
+  if (open.length) missing.push(open.length + ' case(s) de la check-list ⑨ non cochée(s).');
+  return { ok: missing.length === 0, missing };
+}
+
+function header() {
+  const acts = actionItems();
+  const done = acts.filter(i => val(i, 'statut') === 'Fait').length;
+  const blocked = acts.filter(i => val(i, 'statut') === 'Bloqué').length;
+  const late = acts.filter(isLate).length;
+  const dec = decisionItem();
+  const e = dec ? val(dec, 'eff') : '';
+  const lcls = /Inefficace/.test(e) ? 'red' : /Efficace/.test(e) ? 'green' : /Partielle/.test(e) ? 'orange' : '';
+  const g = gateStatus();
+  return h('div', { class: 'hdr', id: 'hdr' },
+    h('div', { class: 'title' }, h('small', null, 'Panneau QRQC · crise qualité'), h('h1', null, S.boardName)),
+    h('div', { class: 'tiles' },
+      h('div', { class: 'tile ' + (done === acts.length && acts.length ? 'ok' : '') }, h('b', null, done + '/' + acts.length), h('span', null, 'actions faites')),
+      h('div', { class: 'tile ' + (blocked ? 'bad' : '') }, h('b', null, String(blocked)), h('span', null, 'bloquées')),
+      h('div', { class: 'tile ' + (late ? 'bad' : '') }, h('b', null, String(late)), h('span', null, 'en retard')),
+      h('div', { class: 'tile' }, h('div', { class: 'light ' + lcls }), h('span', null, e ? e.replace(/^\S+\s/, '') : 'Efficacité non évaluée')),
+      h('div', { class: 'tile ' + (g.ok ? 'ok' : 'bad') }, h('b', null, g.ok ? 'OUI' : 'NON'), h('span', null, 'clôture possible'))),
+    h('div', { class: 'tools' },
+      h('button', { class: 'btn primary', onclick: () => window.print() }, 'Imprimer le panneau'),
+      h('button', { class: 'btn', onclick: () => refresh(true) }, 'Actualiser'),
+      h('div', { class: 'saved', id: 'saved' }, S.guest ? 'Vue fournisseur' : '')));
+}
+function refreshHeader() { const o = $('#hdr'); if (o) o.replaceWith(header()); }
+
+/* ==================== ① Problème ==================== */
+function problem() {
+  const items = inGroup('g1');
+  return panel('#1d4ed8', '①', 'Le problème', 'Les faits, rien que les faits : chaque case se remplit directement ici et s’enregistre en sortant du champ.',
+    h('div', { class: 'postits' }, items.map(it =>
+      h('div', { class: 'postit' },
+        h('h4', null, shortName(it.name), subName(it.name) ? h('small', null, subName(it.name)) : null),
+        area(it, 'rep', { rows: 3 })))));
+}
+
+/* ==================== Tickets d'actions (②, ⑤, ⑥, ⑧) ==================== */
+function tickets(gkey, label) {
+  const items = inGroup(gkey);
+  const locked = S.guest;
+  const rows = items.map(it => {
+    const st = val(it, 'statut');
+    const n = filesCount(it);
+    return h('div', { class: 'ticket t-' + tone(st) + (isLate(it) ? ' late' : '') },
+      h('input', { type: 'text', class: 'name', value: it.name, 'aria-label': 'Intitulé de l’action',
+        onchange: e => { const v = e.target.value.trim(); if (v) setMany(it, [P.name(v)]); else e.target.value = it.name; } }),
+      val(it, 'guide') ? h('p', { class: 'hint' }, val(it, 'guide')) : null,
+      h('div', { class: 'fields' },
+        field('Qui', personSel(it)),
+        field('Pour quand', dateIn(it, 'ech')),
+        field('Côté', statusSel(it, 'cote', { label: 'Côté', after: refreshHeader })),
+        field('Avancement', statusSel(it, 'statut', { label: 'Avancement' })),
+        field('Validation Izipizi', statusSel(it, 'valid', { label: 'Validation', disabled: locked })),
+        field('Preuve', h('div', { class: 'clip' },
+          h('button', { class: 'btn', onclick: () => openCard(it), title: 'Ouvrir la fiche pour joindre des fichiers ou écrire une mise à jour' }, '📎 ' + (n ? n + ' fichier' + (n > 1 ? 's' : '') : 'Joindre'))))),
+      area(it, 'rep', { rows: 2, placeholder: 'Réponse, résultat, lien vers la preuve…' }));
+  });
+  return h('div', { class: 'rows' }, rows.length ? rows : h('p', { class: 'hint' }, 'Aucune ligne pour l’instant.'),
+    h('div', { class: 'addrow' }, h('button', { class: 'btn', onclick: () => openNameDialog('Nouvelle ' + label, 'Verbe + objet + preuve attendue', n =>
+      addItem(gkey, n, [P.status('statut', 'À démarrer'), P.status('cote', '🏭 Fournisseur'), P.status('valid', '⏳ À valider')])) }, '＋ Ajouter une ' + label)));
+}
+
+/* ==================== 5 Pourquoi (③ ④) ==================== */
+const CIRC = '①②③④⑤';
+function whyBlock(gkey, color, disc, title, sub) {
+  const items = inGroup(gkey);
+  const whys = items.filter(i => /^POURQUOI\s*[①②③④⑤]/.test(i.name)).sort((a, b) => CIRC.indexOf(a.name.match(/[①②③④⑤]/)[0]) - CIRC.indexOf(b.name.match(/[①②③④⑤]/)[0]));
+  const others = items.filter(i => !whys.includes(i));
+  const chain = [];
+  whys.forEach((it, i) => {
+    const root = i === whys.length - 1;
+    if (i) chain.push(h('div', { class: 'arrow' }, 'parce que…'));
+    chain.push(h('div', { class: 'why' + (root ? ' root' : '') },
+      h('div', { class: 'wh' }, h('b', null, root ? 'Pourquoi ' + CIRC[i] + ' — CAUSE RACINE' : 'Pourquoi ' + CIRC[i]), statusSel(it, 'statut', { label: 'Avancement' })),
+      subName(it.name) ? h('p', { class: 'hint' }, subName(it.name)) : null,
+      area(it, 'rep', { rows: 2 })));
+  });
+  return panel(color, disc, title, sub, h('div', { class: 'chain' }, chain),
+    others.length ? h('div', { class: 'checks' }, others.map(it =>
+      h('div', { class: 'check' }, h('b', null, shortName(it.name)), subName(it.name) ? h('div', { class: 'hint' }, subName(it.name)) : null,
+        statusSel(it, 'statut', { label: 'Avancement' }), area(it, 'rep', { rows: 2 })))) : null);
+}
+
+/* ==================== Ishikawa ==================== */
+function wrapText(str, n, maxLines) {
+  const words = (str || '').split(/\s+/).filter(Boolean), lines = []; let cur = '';
+  for (const w of words) { if ((cur + ' ' + w).trim().length > n) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = trunc(lines[maxLines - 1] + '…', n); }
+  return lines;
+}
+function fishbone() {
+  const W = 1240, H = 540, SY = 270;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'fish', role: 'img', 'aria-label': 'Diagramme d’Ishikawa des causes' });
+  svg.append(s('line', { x1: 40, y1: SY, x2: 1000, y2: SY, class: 'spine' }));
+  svg.append(s('polygon', { points: `1000,${SY - 12} 1016,${SY} 1000,${SY + 12}`, fill: '#14213d' }));
+  svg.append(s('rect', { x: 1016, y: SY - 95, width: 210, height: 190, rx: 10, class: 'headbox' }));
+  const problem = (inGroup('g1')[0] && val(inGroup('g1')[0], 'rep')) || S.boardName;
+  const ht = s('text', { class: 'headtxt', x: 1030, y: SY - 62 });
+  wrapText(problem, 17, 6).forEach((ln, i) => { const t = s('tspan', { x: 1030, dy: i ? 24 : 0 }); t.textContent = ln; ht.append(t); });
+  svg.append(ht);
+  const causes = inGroup('gI').filter(i => !PLACEHOLDER.test(i.name));
+  BRANCHES.forEach(br => {
+    const top = br.pos === 'top';
+    const sx = br.x - 100, sy = top ? 70 : 470, ex = br.x + 20, ey = SY;
+    svg.append(s('line', { x1: sx, y1: sy, x2: ex, y2: ey, class: 'bone' }));
+    const ly = top ? sy - 36 : sy;
+    const lab = s('g', { class: 'blabel', tabindex: 0, role: 'button', 'aria-label': 'Ajouter une cause : ' + br.k });
+    lab.append(s('rect', { x: sx - 95, y: ly, width: 190, height: 36, rx: 6 }));
+    const lt = s('text', { x: sx, y: ly + 24, 'text-anchor': 'middle' }); lt.textContent = br.k + '  ＋'; lab.append(lt);
+    lab.addEventListener('click', () => openCauseDialog(null, br.k));
+    lab.addEventListener('keydown', e => { if (e.key === 'Enter') openCauseDialog(null, br.k); });
+    svg.append(lab);
+    const list = causes.filter(c => val(c, 'branche') === br.k);
+    const n = list.length;
+    list.forEach((it, i) => {
+      const t = (i + 1) / (n + 1);
+      const px = sx + (ex - sx) * t, py = sy + (ey - sy) * t;
+      const st = val(it, 'scause'), nat = val(it, 'nature');
+      const g = s('g', { class: 'cause t-' + tone(st) + (/Écartée/.test(st) ? ' struck' : ''), tabindex: 0, role: 'button' });
+      const ti = s('title'); ti.textContent = it.name + (st ? ' — ' + st : '') + (nat ? ' (' + nat + ')' : ''); g.append(ti);
+      g.append(s('line', { x1: px - 190, y1: py, x2: px, y2: py, class: 'rib' }));
+      const tx = s('text', { x: px - 10, y: py - 6, 'text-anchor': 'end', class: 'ctext' }); tx.textContent = trunc(it.name, 31); g.append(tx);
+      if (nat) {
+        const isO = /Occurrence/.test(nat);
+        g.append(s('circle', { cx: px - 190, cy: py, r: 9, fill: '#fff', stroke: isO ? '#d62839' : '#f08a24', 'stroke-width': 2.5 }));
+        const bt = s('text', { x: px - 190, y: py + 4, 'text-anchor': 'middle', style: 'font-size:11px;font-weight:700' }); bt.textContent = isO ? 'O' : 'D'; g.append(bt);
+      }
+      g.addEventListener('click', () => openCauseDialog(it));
+      g.addEventListener('keydown', e => { if (e.key === 'Enter') openCauseDialog(it); });
+      svg.append(g);
+    });
+  });
+  return svg;
+}
+function ishikawa() {
+  return panel('#14213d', '🐟', 'Ishikawa — où chercher la cause ?',
+    'Cliquez sur une branche pour ajouter une cause, sur une cause pour la qualifier (hypothèse, prouvée, écartée, cause racine). O = occurrence · D = non-détection.',
+    h('div', { id: 'fishbox' }, fishbone()),
+    h('div', { class: 'legend' },
+      h('span', null, h('i', { style: 'border-color:#8795a6' }), 'Hypothèse'),
+      h('span', null, h('i', { style: 'border-color:#1f9d55' }), 'Prouvée'),
+      h('span', null, h('i', { style: 'border-color:#d62839' }), 'Cause racine'),
+      h('span', null, 'Barrée : écartée')));
+}
+
+/* ==================== Boîtes de dialogue ==================== */
+function dlg(content) { const d = $('#dlg'); d.replaceChildren(content); if (!d.open) d.showModal(); return d; }
+function closeDlg() { const d = $('#dlg'); if (d.open) d.close(); }
+function confirmDlg(msg, onYes) {
+  dlg(h('div', null, h('h3', null, 'Confirmer'), h('p', null, msg),
+    h('div', { class: 'acts' }, h('button', { class: 'btn', onclick: closeDlg }, 'Annuler'),
+      h('button', { class: 'btn danger', onclick: () => { closeDlg(); onYes(); } }, 'Supprimer'))));
+}
+function openNameDialog(title, placeholder, onOk) {
+  const inp = h('input', { type: 'text', placeholder });
+  const ok = () => { const v = inp.value.trim(); if (!v) { inp.focus(); return; } closeDlg(); onOk(v); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
+  dlg(h('div', null, h('h3', null, title), h('div', { class: 'f' }, 'Intitulé', inp),
+    h('div', { class: 'acts' }, h('button', { class: 'btn', onclick: closeDlg }, 'Annuler'), h('button', { class: 'btn primary', onclick: ok }, 'Ajouter'))));
+  inp.focus();
+}
+function openCauseDialog(it, branch) {
+  const placeholder = !it ? inGroup('gI').find(i => PLACEHOLDER.test(i.name) && val(i, 'branche') === branch) : null;
+  const target = it || placeholder || null;
+  const opt = k => (S.cols[k] ? S.cols[k].labels : []);
+  const mk = (k, cur) => { const sel = h('select', null, opt(k).map(l => h('option', { value: l }, l))); if (cur) sel.value = cur; return sel; };
+  const name = h('input', { type: 'text', value: it ? it.name : '', placeholder: 'Ex. : humidité de la matière à l’entrée de la presse' });
+  const br = mk('branche', it ? val(it, 'branche') : branch);
+  const na = mk('nature', it ? val(it, 'nature') : (branch === 'Mesure / Contrôle' ? 'Non-détection' : 'Occurrence'));
+  const sc = mk('scause', it ? val(it, 'scause') : 'Hypothèse');
+  const det = h('textarea', { rows: 3, placeholder: 'Preuve, constat, test réalisé…', value: it ? val(it, 'rep') : '' });
+  const save = async () => {
+    const n = name.value.trim(); if (!n) { name.focus(); return; }
+    const pairs = [P.status('branche', br.value), P.status('nature', na.value), P.status('scause', sc.value), P.long('rep', det.value)];
+    closeDlg();
+    if (target) { await setMany(target, [P.name(n)].concat(pairs)); render(); }
+    else await addItem('gI', n, pairs);
+  };
+  dlg(h('div', null, h('h3', null, it ? 'Modifier la cause' : 'Nouvelle cause'),
+    h('div', { class: 'f' }, 'Cause', name), h('div', { class: 'f' }, 'Branche', br), h('div', { class: 'f' }, 'Nature', na),
+    h('div', { class: 'f' }, 'Statut de la cause', sc), h('div', { class: 'f' }, 'Détail / preuve', det),
+    h('div', { class: 'acts' },
+      it ? h('button', { class: 'btn danger', onclick: () => confirmDlg('Supprimer cette cause du board ?', () => deleteItem(it)) }, 'Supprimer') : null,
+      h('button', { class: 'btn', onclick: closeDlg }, 'Annuler'),
+      h('button', { class: 'btn primary', onclick: save }, 'Enregistrer'))));
+  name.focus();
+}
+
+/* ==================== Mesures avant / après ==================== */
+function measures() {
+  const rows = inGroup('gM');
+  const ord = p => rows.filter(r => val(r, 'phase') === p).sort((a, b) => (val(a, 'dmes') || '9999').localeCompare(val(b, 'dmes') || '9999'));
+  const avant = ord('Avant actions'), apres = ord('Après actions');
+  return { rows, avant, apres, plot: avant.concat(apres).filter(r => num(r, 'qd') != null) };
+}
+function sums(list) {
+  const qd = list.reduce((a, r) => a + (num(r, 'qd') || 0), 0);
+  const qc = list.reduce((a, r) => a + (num(r, 'qc') || 0), 0);
+  const withQd = list.filter(r => num(r, 'qd') != null).length;
+  return { qd, qc, rate: qc > 0 ? qd / qc * 100 : null, avg: withQd ? qd / withQd : null };
+}
+function chartSvg() {
+  const m = measures(), pts = m.plot;
+  const W = 1100, H = 340, L = 64, R = 64, T = 34, B = 66, pw = W - L - R, ph = H - T - B;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'chart', role: 'img', 'aria-label': 'Défauts avant et après actions' });
+  if (!pts.length) {
+    const t = s('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', style: 'font-size:18px;fill:#5b6776' });
+    t.textContent = 'Saisissez les mesures ci-dessous : la courbe se dessine ici.'; svg.append(t); return svg;
+  }
+  const maxD = Math.max(1, ...pts.map(r => num(r, 'qd')));
+  const rates = pts.map(r => (num(r, 'qc') > 0 ? num(r, 'qd') / num(r, 'qc') * 100 : null));
+  const maxR = Math.max(1, ...rates.filter(x => x != null));
+  const yD = v => T + ph - (v / (maxD * 1.15)) * ph, yR = v => T + ph - (v / (maxR * 1.15)) * ph;
+  const slot = pw / pts.length, bw = Math.min(70, slot * 0.55);
+  svg.append(s('line', { x1: L, y1: T, x2: L, y2: T + ph, class: 'axis' }), s('line', { x1: L, y1: T + ph, x2: W - R, y2: T + ph, class: 'axis' }), s('line', { x1: W - R, y1: T, x2: W - R, y2: T + ph, class: 'axis' }));
+  const lt = s('text', { x: L - 8, y: T - 12, 'text-anchor': 'end', style: 'font-weight:700' }); lt.textContent = 'Défauts (nb)'; svg.append(lt);
+  const rt = s('text', { x: W - R + 8, y: T - 12, style: 'font-weight:700' }); rt.textContent = 'Taux (%)'; svg.append(rt);
+  const firstApres = pts.findIndex(r => val(r, 'phase') === 'Après actions');
+  pts.forEach((r, i) => {
+    const cx = L + slot * (i + 0.5), qd = num(r, 'qd'), after = val(r, 'phase') === 'Après actions';
+    svg.append(s('rect', { x: cx - bw / 2, y: yD(qd), width: bw, height: T + ph - yD(qd), fill: after ? '#1f9d55' : '#d62839', rx: 3 }));
+    const v = s('text', { x: cx, y: yD(qd) - 6, 'text-anchor': 'middle', style: 'font-weight:700' }); v.textContent = String(qd); svg.append(v);
+    const d = val(r, 'dmes'); const lab = d ? d.slice(8, 10) + '/' + d.slice(5, 7) : trunc(shortName(r.name).replace(/^Semaine \/ lot\s*/, ''), 12);
+    const x = s('text', { x: cx, y: T + ph + 20, 'text-anchor': 'middle' }); x.textContent = lab; svg.append(x);
+  });
+  const lp = pts.map((r, i) => (rates[i] == null ? null : [L + slot * (i + 0.5), yR(rates[i]), rates[i]])).filter(Boolean);
+  if (lp.length) {
+    svg.append(s('polyline', { points: lp.map(p => p[0] + ',' + p[1]).join(' '), class: 'rate' }));
+    lp.forEach(p => { svg.append(s('circle', { cx: p[0], cy: p[1], r: 5, fill: '#fff', stroke: '#14213d', 'stroke-width': 3 })); });
+  }
+  if (firstApres > 0) {
+    const mx = L + slot * firstApres;
+    svg.append(s('line', { x1: mx, y1: T - 4, x2: mx, y2: T + ph, class: 'marker' }));
+    const mt = s('text', { x: mx + 8, y: T + 12, class: 'mk' }); mt.textContent = '▶ ACTIONS EN PLACE'; svg.append(mt);
+  }
+  return svg;
+}
+function kpis() {
+  const m = measures(), A = sums(m.avant), B = sums(m.apres);
+  const useRate = A.rate != null && B.rate != null;
+  const a = useRate ? A.rate : A.avg, b = useRate ? B.rate : B.avg;
+  const unit = useRate ? ' %' : '';
+  const fmt = v => (v == null ? '—' : (Math.round(v * 10) / 10).toString().replace('.', ',') + unit);
+  let varTxt = '—', cls = '';
+  if (a != null && b != null && a > 0) { const d = (b - a) / a * 100; varTxt = (d > 0 ? '+' : '') + Math.round(d) + ' %'; cls = d < 0 ? 'good' : 'bad'; }
+  return h('div', { class: 'kpis', id: 'kpis' },
+    h('div', { class: 'kpi bad' }, h('b', null, fmt(a)), h('span', null, useRate ? 'taux de défaut AVANT actions' : 'défauts par période AVANT actions')),
+    h('div', { class: 'kpi good' }, h('b', null, fmt(b)), h('span', null, useRate ? 'taux de défaut APRÈS actions' : 'défauts par période APRÈS actions')),
+    h('div', { class: 'kpi ' + cls }, h('b', null, varTxt), h('span', null, 'évolution (cible : forte baisse, durable)')));
+}
+function refreshChart() {
+  const c = $('#chartbox'); if (c) c.replaceChildren(chartSvg());
+  const k = $('#kpis'); if (k) k.replaceWith(kpis());
+  refreshHeader();
+}
+function measuresPanel() {
+  const m = measures();
+  const critItem = inGroup('g7').find(i => /^CRIT/.test(i.name));
+  const body = m.rows.map(r => {
+    const rate = (num(r, 'qc') > 0 && num(r, 'qd') != null) ? (Math.round(num(r, 'qd') / num(r, 'qc') * 1000) / 10).toString().replace('.', ',') + ' %' : '—';
+    const rt = h('td', null, rate);
+    const upd = () => { const q = num(r, 'qc'), d = num(r, 'qd'); rt.textContent = (q > 0 && d != null) ? (Math.round(d / q * 1000) / 10).toString().replace('.', ',') + ' %' : '—'; refreshChart(); };
+    const nIn = k => { const i = h('input', { type: 'number', min: '0', value: val(r, k), 'aria-label': k === 'qc' ? 'Quantité contrôlée' : 'Quantité défectueuse',
+      onchange: async () => { if (await setMany(r, [P.num(k, i.value)])) upd(); } }); return i; };
+    const dIn = h('input', { type: 'date', value: val(r, 'dmes'), onchange: async () => { if (await setMany(r, [P.date('dmes', dIn.value)])) upd(); } });
+    return h('tr', null,
+      h('td', null, h('input', { type: 'text', value: r.name, onchange: e => { const v = e.target.value.trim(); if (v) setMany(r, [P.name(v)]); } })),
+      h('td', null, dIn), h('td', null, nIn('qc')), h('td', null, nIn('qd')), rt,
+      h('td', null, statusSel(r, 'phase', { label: 'Phase', after: () => { render(); } })),
+      h('td', null, h('button', { class: 'btn danger', title: 'Supprimer la ligne', onclick: () => confirmDlg('Supprimer cette mesure ?', () => deleteItem(r)) }, '✕')));
+  });
+  const critIn = critItem ? line(critItem, 'crit', { placeholder: 'Ex. : 0 défaut sur 3 lots consécutifs contrôlés à 100 %' }) : null;
+  return panel('#1f9d55', '⑦', 'Preuve d’efficacité — défauts avant / après actions',
+    'Une ligne par semaine ou par lot. La phase « Après actions » commence quand les actions sont réellement en place sur le terrain.',
+    h('div', { id: 'chartbox' }, chartSvg()), kpis(),
+    critItem ? h('div', { class: 'crit' }, h('label', null, '🎯 Critère de succès (à fixer dès le départ)'), critIn) : null,
+    h('div', { style: 'overflow-x:auto;margin-top:10px' },
+      h('table', { class: 'meas' },
+        h('thead', null, h('tr', null, ['Semaine / lot', 'Date', 'Qté contrôlée', 'Qté défectueuse', 'Taux', 'Phase', ''].map(t => h('th', null, t)))),
+        h('tbody', null, body))),
+    h('div', { class: 'addrow' }, h('button', { class: 'btn', onclick: () => {
+      const last = m.rows[m.rows.length - 1];
+      const ph = last ? val(last, 'phase') : 'Avant actions';
+      openNameDialog('Nouvelle mesure', 'Ex. : Semaine 47 — lot L2311', n => addItem('gM', n, [P.status('phase', ph || 'Avant actions'), P.date('dmes', today())]));
+    } }, '＋ Ajouter une mesure')));
+}
+
+/* ==================== ⑦ Efficacité ==================== */
+function efficacyCards() {
+  const locked = S.guest;
+  const items = inGroup('g7');
+  return h('div', { class: 'effgrid' }, items.filter(i => !/^CRIT/.test(i.name)).map(it => {
+    const isDec = /^DÉCISION/.test(it.name);
+    const cur = val(it, 'eff');
+    const seg = h('div', { class: 'seg' }, (S.cols.eff ? S.cols.eff.labels : []).map(l =>
+      h('button', { class: (l === cur ? 'on ' : '') + 't-' + (/Inefficace/.test(l) ? 'red' : /Efficace/.test(l) ? 'green' : /Partielle/.test(l) ? 'orange' : 'gray'),
+        disabled: locked || null, onclick: async () => { if (await setMany(it, [P.status('eff', l)])) render(); } }, l)));
+    return h('div', { class: 'eff' }, h('h4', null, isDec ? 'DÉCISION D’EFFICACITÉ' : shortName(it.name)),
+      val(it, 'guide') ? h('p', { class: 'hint' }, val(it, 'guide')) : null, seg,
+      h('div', { class: 'fields' }, field('Vérifié le', dateIn(it, 'dver', { disabled: locked })), field('Avancement', statusSel(it, 'statut', { label: 'Avancement' }))),
+      area(it, 'rep', { rows: 2, placeholder: isDec ? 'Motif de la décision…' : 'Résultats, n° de lots, constats…' }),
+      locked && isDec ? h('div', { class: 'lock' }, '🔒 Réservé à Izipizi Qualité') : null);
+  }));
+}
+
+/* ==================== ⑨ Clôture ==================== */
+function closure() {
+  const g = gateStatus(), locked = S.guest;
+  const items = inGroup('g9');
+  const rows = items.map(it => {
+    const final = /^🏁/.test(it.name), on = val(it, 'statut') === 'Fait';
+    const blocked = locked || (final && !g.ok && !on);
+    const btn = h('button', { class: on ? 'on' : '', disabled: blocked || null, 'aria-pressed': on ? 'true' : 'false',
+      title: final && !g.ok ? 'Clôture impossible : voir le bandeau' : '',
+      onclick: async () => { if (await setMany(it, [P.status('statut', on ? 'À démarrer' : 'Fait')])) render(); } }, on ? '✓' : '');
+    return h('div', null, h('div', { class: 'chk' }, btn, h('div', { style: 'flex:1' }, h('b', null, it.name.replace(/^☐\s*/, '')),
+      final ? h('div', { style: 'margin-top:6px' }, area(it, 'rep', { rows: 2, placeholder: 'Date de clôture, signataire Izipizi Qualité, fournisseur(s) informé(s)…', disabled: locked })) : null)));
+  });
+  return panel('#14213d', '⑨', 'Clôture',
+    'La clôture est une décision Izipizi. Elle n’est possible que si l’efficacité est prouvée et toutes les actions sont validées.',
+    h('div', { class: 'gate ' + (g.ok ? 'ok' : 'ko'), id: 'gate' },
+      h('b', null, g.ok ? '✔ CLÔTURE AUTORISÉE' : '✖ CLÔTURE IMPOSSIBLE'),
+      g.ok ? null : h('ul', null, g.missing.map(x => h('li', null, x)))),
+    rows, locked ? h('div', { class: 'lock' }, '🔒 Cette étape est réservée à Izipizi Qualité.') : null);
+}
+
+/* ==================== Page ==================== */
+function render() {
+  if (!S.ready) return;
+  const frag = document.createDocumentFragment();
+  const saved = $('#saved') ? $('#saved').textContent : '';
+  frag.append(
+    header(),
+    problem(),
+    panel('#d62839', '②', 'Contenir — protéger le client tout de suite', 'Stock bloqué, trié, livraisons sécurisées, client informé : dans les 24 h.', tickets('g2', 'action de contingence')),
+    ishikawa(),
+    h('div', { class: 'two' },
+      whyBlock('g3', '#f08a24', '③', 'Occurrence — 5 Pourquoi', 'Pourquoi le défaut est-il apparu ? Descendre jusqu’à la cause système, jamais « erreur de l’opérateur ».'),
+      whyBlock('g4', '#f08a24', '④', 'Non-détection — 5 Pourquoi', 'Pourquoi ne l’a-t-on pas vu ? Quel contrôle devait l’arrêter, et pourquoi a-t-il échoué ?')),
+    h('div', { class: 'two' },
+      panel('#1d4ed8', '⑤', 'Corriger l’occurrence', 'Supprimer la cause racine. Privilégier ce qui rend l’erreur impossible.', tickets('g5', 'action corrective')),
+      panel('#1d4ed8', '⑥', 'Sécuriser la détection', 'Ne plus laisser passer : point de contrôle, critère, échantillon limite, contrôleurs qualifiés.', tickets('g6', 'action de détection'))),
+    measuresPanel(),
+    panel('#1f9d55', '⑦', 'Mesures d’efficacité', 'Aucune clôture sans preuve : mesure sur les lots suivants, test de détection, audit terrain.', efficacyCards()),
+    panel('#1f9d55', '⑧', 'Pérenniser', 'Standards mis à jour, risque étendu aux autres produits, leçon partagée.', tickets('g8', 'action de pérennisation')),
+    closure());
+  const y = window.scrollY;
+  $('#app').replaceChildren(frag);
+  document.querySelectorAll('textarea').forEach(grow);
+  if (saved) $('#saved').textContent = saved;
+  window.scrollTo(0, y);
+}
+
+function showMsg(t) { $('#app').replaceChildren(h('div', { class: 'msg' }, t)); }
+
+async function refresh(manual) {
+  try { await load(); S.ready = true; render(); if (manual) toast('Panneau actualisé'); }
+  catch (e) { if (!S.ready) showMsg('Impossible de charger le board : ' + e.message); else toast('Actualisation impossible : ' + e.message, true); }
+}
+
+async function start(boardId) {
+  if (S.boardId === String(boardId)) return;
+  S.boardId = String(boardId);
+  await loadPeople();
+  await refresh(false);
+  setInterval(() => {
+    const a = document.activeElement, d = $('#dlg');
+    if (document.hidden || (d && d.open) || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return;
+    refresh(false);
+  }, 60000);
+}
+
+/* ==================== Démarrage ==================== */
+const qp = new URLSearchParams(location.search);
+if (qp.get('board')) start(qp.get('board'));
+monday.listen('context', res => { if (res && res.data && res.data.boardId) start(res.data.boardId); });
+setTimeout(() => { if (!S.boardId) showMsg('Ouvrez ce panneau depuis l’onglet d’un board Monday (vue « Panneau QRQC »).'); }, 4000);
+})();
+</script>
+</body>
+</html>
